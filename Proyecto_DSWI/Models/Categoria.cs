@@ -1,11 +1,32 @@
-﻿namespace Proyecto_DSWI.Models
-{
-    public class Categoria
+﻿    using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
+
+    namespace Proyecto_DSWI.Models
     {
-        public short CategoriaId { get; set; }   // smallint
-        public string Nombre { get; set; }       // varchar(80)
-        public string Descripcion { get; set; } // varchar(255) NULL
-        public bool Activo { get; set; }         // bit
-        public DateTime UltimaActualizacion { get; set; } // datetime
+        [Table("categoria")] 
+        public class Categoria
+        {
+            [Key]
+            [Column("categoria_id")]
+            public short CategoriaId { get; set; } 
+
+            [Required(ErrorMessage = "El nombre es obligatorio")]
+            [StringLength(80)]
+            [Column("nombre")]
+            public string? Nombre { get; set; }
+
+            [StringLength(255)]
+            [Column("descripcion")]
+            public string? Descripcion { get; set; }
+
+            [Column("activo")]
+            public bool Activo { get; set; }
+
+            [Column("ultima_actualizacion")]
+            public DateTime UltimaActualizacion { get; set; }
+
+           
+            public virtual ICollection<Producto> Productos { get; set; } = new List<Producto>();
+        }
     }
-}
+

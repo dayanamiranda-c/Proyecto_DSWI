@@ -15,7 +15,15 @@ namespace Proyecto_DSWI.Controllers
             _context = context;
         }
 
-        // 1. LISTADO DE PRODUCTOS (Tu pantalla principal)
+
+        [HttpGet]
+        public IActionResult Inicio()
+        {
+
+            return View();
+        }
+
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -26,7 +34,7 @@ namespace Proyecto_DSWI.Controllers
             return View(productos);
         }
 
-        // 2. AGREGAR NUEVO PRODUCTO (GET y POST)
+  
         [HttpGet]
         public IActionResult Nuevo()
         {
@@ -49,12 +57,11 @@ namespace Proyecto_DSWI.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Si hay error, recargamos el combo
+   
             ViewBag.Categorias = new SelectList(_context.Categorias, "CategoriaId", "Nombre");
             return View(producto);
         }
 
-        // 3. HISTORIAL DE MOVIMIENTOS
         [HttpGet]
         public async Task<IActionResult> Movimientos()
         {
@@ -67,7 +74,7 @@ namespace Proyecto_DSWI.Controllers
             return View(historial);
         }
 
-        // 4. INVENTARIO POR ALMACEN
+ 
         [HttpGet]
         public async Task<IActionResult> Inventario(short? id)
         {
@@ -77,7 +84,7 @@ namespace Proyecto_DSWI.Controllers
                 .Include(i => i.Producto)
                 .AsQueryable();
 
-            // Si seleccionan un almacén en el filtro, aplicamos el WHERE
+
             if (id.HasValue)
             {
                 query = query.Where(i => i.AlmacenId == id);

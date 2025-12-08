@@ -1,0 +1,50 @@
+﻿@* Views/Account/Login.cshtml *@
+@model Proyecto_DSWI.Models.LoginViewModel
+
+@{
+    ViewData["Title"] = "Iniciar Sesión";
+    // 1. CAMBIAR EL LAYOUT
+    Layout = "_LayoutLogin";
+}
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-5 shadow-lg border-0" style="max-width: 400px; width: 100%;">
+
+        <h2 class="card-title fw-bold text-primary mb-1">Bienvenido</h2>
+        <p class="text-muted mb-4">Ingresa tus credenciales para acceder.</p>
+
+        <form asp-action="Login" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label">Email</label>
+                <input asp-for="Username" class="form-control" placeholder="ej. gerente@erp.com" />
+                <span asp-validation-for="Username" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Password" class="form-label">Contraseña</label>
+                <input asp-for="Password" type="password" class="form-control" placeholder="Escribe tu contraseña" />
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">
+                <i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión
+            </button>
+
+            @* Mostrar errores del ModelState aquí *@
+            @if (ViewData.ModelState.ContainsKey(string.Empty))
+            {
+                <div class="mt-3 text-center text-danger small">
+                    @(ViewData.ModelState[string.Empty]?.Errors.FirstOrDefault()?.ErrorMessage)
+                </div>
+            }
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

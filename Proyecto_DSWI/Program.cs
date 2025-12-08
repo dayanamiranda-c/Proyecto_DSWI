@@ -4,6 +4,26 @@ using Proyecto_DSWI.Models;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddAuthentication("Cookies") // Especifica el esquema de autenticación por defecto (Cookies)
+    .AddCookie("Cookies", options =>
+    {
+        // Ruta a la que se redirigirá si el usuario intenta acceder a una vista protegida sin iniciar sesión
+        options.LoginPath = "/Account/Login";
+
+        // (Opcional) Ruta de acceso denegado si el usuario no tiene el rol necesario
+        options.AccessDeniedPath = "/Account/AccessDenied";
+
+        // (Opcional) Nombre de la cookie
+        options.Cookie.Name = "MyAppAuthCookie";
+    });
+
+// 2. Añadir el servicio de Autorización
+builder.Services.AddAuthorization(options =>
+{
+    // Opcional: Puedes definir políticas de autorización más complejas aquí.
+    // Para roles simples, el atributo [Authorize(Roles="...")] es suficiente.
+});
+
 var connectionString = builder.Configuration.GetConnectionString("CadenaSQL");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -20,7 +40,11 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+app.UseAuthentication();
+
 app.UseRouting();
+
+app.UseAuthorization();
 
 app.UseAuthorization();
 

@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Proyecto_DSWI.Models;
 using System;
 
 namespace Proyecto_DSWI.Controllers
 {
+    [Authorize]
     public class CatalogoController : Controller
     {
         private readonly AppDbContext _context;
@@ -36,6 +38,8 @@ namespace Proyecto_DSWI.Controllers
 
   
         [HttpGet]
+        [Authorize(Roles = "Admin")]
+
         public IActionResult Nuevo()
         {
             // Carga el combo de categorías
@@ -63,6 +67,7 @@ namespace Proyecto_DSWI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "User,Admin")]
         public async Task<IActionResult> Movimientos()
         {
             var historial = await _context.InventarioMovimientos
@@ -76,6 +81,7 @@ namespace Proyecto_DSWI.Controllers
 
  
         [HttpGet]
+        [Authorize(Roles = "User,Admin")]
         public async Task<IActionResult> Inventario(short? id)
         {
             // Consulta base

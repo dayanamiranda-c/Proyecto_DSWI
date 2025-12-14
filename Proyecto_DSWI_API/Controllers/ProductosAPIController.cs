@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Proyecto_DSWI_API.DTOs;
 using Proyecto_DSWI_API.Interfaces;
-using Proyecto_DSWI_API.Models;
 
 namespace Proyecto_DSWI_API.Controllers
 {
@@ -29,11 +29,31 @@ namespace Proyecto_DSWI_API.Controllers
             return Ok(prod);
         }
 
+        // POST: api/productos
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Producto producto)
+        public async Task<IActionResult> Post([FromBody] ProductoCreateDTO productoDto)
         {
-            var resultado = await _productoDao.InsertarProducto(producto);
-            return Ok(new { mensaje = resultado });
+            var resultado = await _productoDao.InsertarProducto(productoDto);
+            if (resultado == "OK") return Ok(new { mensaje = "Producto registrado" });
+            return BadRequest(new { mensaje = resultado });
+        }
+
+        // PUT: api/productos
+        [HttpPut]
+        public async Task<IActionResult> Put([FromBody] ProductoUpdateDTO productoDto)
+        {
+            var resultado = await _productoDao.ActualizarProducto(productoDto);
+            if (resultado == "OK") return Ok(new { mensaje = "Producto actualizado" });
+            return BadRequest(new { mensaje = resultado });
+        }
+
+        // DELETE: api/productos/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var resultado = await _productoDao.EliminarProducto(id);
+            if (resultado == "OK") return Ok(new { mensaje = "Producto eliminado" });
+            return BadRequest(new { mensaje = resultado });
         }
     }
 }

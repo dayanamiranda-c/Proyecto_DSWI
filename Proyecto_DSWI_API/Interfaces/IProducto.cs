@@ -1,4 +1,5 @@
-﻿using Proyecto_DSWI_API.Models;
+﻿using Proyecto_DSWI_API.DTOs; // Agregar using
+using Proyecto_DSWI_API.Models;
 
 namespace Proyecto_DSWI_API.Interfaces
 {
@@ -6,6 +7,10 @@ namespace Proyecto_DSWI_API.Interfaces
     {
         Task<IEnumerable<Producto>> ListarProductos();
         Task<Producto> ObtenerProducto(int id);
-        Task<string> InsertarProducto(Producto producto);
+
+        // CAMBIO: Ahora reciben DTOs en lugar de la entidad completa
+        Task<string> InsertarProducto(ProductoCreateDTO p);
+        Task<string> ActualizarProducto(ProductoUpdateDTO p);
+        Task<string> EliminarProducto(int id);
     }
 }

@@ -1,23 +1,24 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Proyecto_DSWI.Extensions; // Tu clase para Session
 using Proyecto_DSWI.Models;
-using Proyecto_DSWI.Extensions; // Importar la extensión de sesión
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims; // Para leer el ID del usuario
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 
 namespace Proyecto_DSWI.Controllers
 {
-    [Authorize] // Solo usuarios logueados pueden comprar
+    [Authorize]
     public class CarritoController : Controller
     {
-        private readonly AppDbContext _context;
-        const string SessionKey = "CarritoCompras"; // Clave para la sesión
+        private readonly IHttpClientFactory _httpClientFactory;
+        const string SessionKey = "CarritoCompras";
 
-        public CarritoController(AppDbContext context)
+        public CarritoController(IHttpClientFactory httpClientFactory)
         {
-            _context = context;
+            _httpClientFactory = httpClientFactory;
         }
 
-        // 1. VISTA: Ver qué hay en el carrito
         public IActionResult Index()
         {
             var carrito = HttpContext.Session.GetObjectFromJson<List<CarritoItemViewModel>>(SessionKey)
@@ -25,23 +26,28 @@ namespace Proyecto_DSWI.Controllers
             return View(carrito);
         }
 
-        // 2. ACCIÓN: Agregar producto al carrito
         public async Task<IActionResult> Agregar(int id)
         {
-            // Buscar producto en BD para obtener precio y nombre
-            var producto = await _context.Productos.FindAsync(id);
-            if (producto == null) return NotFound();
+            // OJO: Aquí deberíamos pedir el producto a la API para ver el precio real,
+            // pero por simplicidad puedes dejarlo o usar _httpClientFactory.
+            // Si quieres hacerlo rápido, asume que recibes los datos necesarios o consúmelo:
 
-            // Recuperar carrito actual
+            var client = _httpClientFactory.CreateClient("TiendaAPI");
+            var response = await client.GetAsync($"api/productos/{id}");
+
+            if (!response.IsSuccessStatusCode) return NotFound();
+
+            var jsonString = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var producto = JsonSerializer.Deserialize<Producto>(jsonString, options);
+
             var carrito = HttpContext.Session.GetObjectFromJson<List<CarritoItemViewModel>>(SessionKey)
                           ?? new List<CarritoItemViewModel>();
 
-            // Verificar si ya existe en el carrito
             var itemExistente = carrito.FirstOrDefault(c => c.ProductoId == id);
-
             if (itemExistente != null)
             {
-                itemExistente.Cantidad++; // Si existe, suma 1
+                itemExistente.Cantidad++;
             }
             else
             {
@@ -53,76 +59,51 @@ namespace Proyecto_DSWI.Controllers
                     Cantidad = 1
                 });
             }
-
-            // Guardar carrito actualizado en sesión
             HttpContext.Session.SetObjectAsJson(SessionKey, carrito);
-
-            return RedirectToAction("Index"); // Ir a la vista del carrito
+            return RedirectToAction("Index");
         }
 
-        // 3. ACCIÓN: Finalizar Compra (TRANSACCIÓN)
         [HttpPost]
         public async Task<IActionResult> ProcesarCompra()
         {
             var carrito = HttpContext.Session.GetObjectFromJson<List<CarritoItemViewModel>>(SessionKey);
             if (carrito == null || !carrito.Any()) return RedirectToAction("Index");
 
-            // --- INICIO TRANSACCIÓN (Requisito Rúbrica) ---
-            using (var transaction = _context.Database.BeginTransaction())
+            // Preparar el DTO para la API
+            // Nota: Asegúrate de obtener el ID real del usuario logueado
+            long userId = 0;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!long.TryParse(userIdClaim, out userId)) userId = 1; // Fallback por si falla el login
+
+            var ventaDto = new
             {
-                try
-                {
-                    // A. Guardar Cabecera (Pedido)
-                    // Nota: Asegúrate de tener el User ID correcto. Aquí uso uno fijo (2) como ejemplo, 
-                    // pero deberías sacarlo de User.Claims si configuraste bien el Login.
-                    long usuarioId = 2;
+                UsuarioId = userId,
+                Total = carrito.Sum(x => x.Subtotal),
+                Detalles = carrito.Select(x => new {
+                    ProductoId = x.ProductoId,
+                    Cantidad = x.Cantidad,
+                    Precio = x.Precio,
+                    Subtotal = x.Subtotal
+                }).ToList()
+            };
 
-                    var pedido = new Pedido
-                    {
-                        UsuarioId = usuarioId,
-                        Fecha = DateTime.Now,
-                        Total = carrito.Sum(x => x.Subtotal),
-                        Estado = "PAGADO"
-                    };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(ventaDto), Encoding.UTF8, "application/json");
 
-                    _context.Pedidos.Add(pedido);
-                    await _context.SaveChangesAsync(); // Genera el ID
+            var client = _httpClientFactory.CreateClient("TiendaAPI");
+            var response = await client.PostAsync("api/ventas/procesar", jsonContent);
 
-                    // B. Guardar Detalles
-                    foreach (var item in carrito)
-                    {
-                        var detalle = new DetallePedido
-                        {
-                            PedidoId = pedido.PedidoId,
-                            ProductoId = item.ProductoId,
-                            Cantidad = item.Cantidad,
-                            PrecioUnitario = item.Precio,
-                            Subtotal = item.Subtotal
-                        };
-                        _context.DetallesPedido.Add(detalle);
-                    }
-                    await _context.SaveChangesAsync();
-
-                    // C. Confirmar
-                    transaction.Commit();
-
-                    // D. Limpiar Carrito
-                    HttpContext.Session.Remove(SessionKey);
-
-                    return RedirectToAction("CompraExitosa");
-                }
-                catch (Exception ex)
-                {
-                    transaction.Rollback();
-                    ViewBag.Error = "Ocurrió un error: " + ex.Message;
-                    return View("Index", carrito);
-                }
+            if (response.IsSuccessStatusCode)
+            {
+                HttpContext.Session.Remove(SessionKey);
+                return RedirectToAction("CompraExitosa");
+            }
+            else
+            {
+                ViewBag.Error = "Error en API: " + await response.Content.ReadAsStringAsync();
+                return View("Index", carrito);
             }
         }
 
-        public IActionResult CompraExitosa()
-        {
-            return View();
-        }
+        public IActionResult CompraExitosa() => View();
     }
 }

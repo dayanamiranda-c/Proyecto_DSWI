@@ -1,96 +1,87 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authentication;
-using System.Security.Claims;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Proyecto_DSWI.Models;
-using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 
 namespace Proyecto_DSWI.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public AccountController(AppDbContext context)
+        public AccountController(IHttpClientFactory httpClientFactory)
         {
-            _context = context;
+            _httpClientFactory = httpClientFactory; // Inyectamos HTTP, no DB
         }
 
-        // ----------------------- VISTA DE LOGIN (GET) -----------------------
         [HttpGet]
-        public IActionResult Login()
-        {
-            // Devuelve la vista de login (Login.cshtml)
-            return View();
-        }
+        public IActionResult Login() => View();
 
-        // ----------------------- PROCESAR LOGIN (POST) -----------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return View(model);
+
+            // 1. Preparar datos para enviar a la API
+            var loginData = new { Email = model.Username, Password = model.Password };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(loginData), Encoding.UTF8, "application/json");
+
+            // 2. Llamar a la API de Auth
+            var client = _httpClientFactory.CreateClient("TiendaAPI");
+            var response = await client.PostAsync("api/auth/login", jsonContent);
+
+            if (response.IsSuccessStatusCode)
             {
-                // 1. Buscar Usuario por Email e INCLUIR sus Roles
-                var usuario = await _context.Usuarios
-                    .Include(u => u.Roles) // ¡Crucial para cargar los roles M:M!
-                    .FirstOrDefaultAsync(u => u.Email == model.Username); // El usuario ingresa su email
+                // 3. Leer respuesta (Usuario + Roles)
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var authUser = JsonSerializer.Deserialize<AuthResponse>(jsonResponse, options);
 
-                // ... (Lógica de validación de contraseña - Asegúrate de usar el SIMULATED_HASH)
-                bool passwordValida = (usuario != null) && (model.Password == usuario.PasswordHash); // <-- CAMBIAR POR LÓGICA DE HASHING REAL
-
-                if (usuario != null && passwordValida)
+                // 4. Crear la Cookie de Sesión en el MVC
+                var claims = new List<Claim>
                 {
-                    // 2. Crear Claims (Identidad)
-                    var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, usuario.UsuarioId.ToString()),
-                        new Claim(ClaimTypes.Name, usuario.Nombre!), // Nombre completo
-                        new Claim(ClaimTypes.Email, usuario.Email!) // Email
-                    };
+                    new Claim(ClaimTypes.NameIdentifier, authUser.UsuarioId.ToString()),
+                    new Claim(ClaimTypes.Name, authUser.Nombre),
+                    new Claim(ClaimTypes.Email, authUser.Email)
+                };
 
-                    // 3. Agregar Claims de Rol (iterando la colección de roles)
-                    foreach (var rol in usuario.Roles)
+                // Agregar roles
+                if (authUser.Roles != null)
+                {
+                    foreach (var rol in authUser.Roles)
                     {
-                        claims.Add(new Claim(ClaimTypes.Role, rol.Nombre!)); // Añadir el nombre del Rol ("Admin" o "User")
+                        claims.Add(new Claim(ClaimTypes.Role, rol));
                     }
-
-                    var claimsIdentity = new ClaimsIdentity(claims, "Cookies");
-
-                    // 4. Iniciar Sesión
-                    await HttpContext.SignInAsync("Cookies", new ClaimsPrincipal(claimsIdentity));
-
-                    return RedirectToAction("Index", "Catalogo");
                 }
 
-                string mensajeError = $"Credenciales inválidas.";
-                ModelState.AddModelError(string.Empty, mensajeError);
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+
+                return RedirectToAction("Index", "Catalogo");
             }
 
+            ModelState.AddModelError("", "Credenciales inválidas (API).");
             return View(model);
         }
 
-        // ----------------------- CERRAR SESIÓN (LOGOUT) ----------------------
-
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            // Elimina la cookie de autenticación (el Claim principal)
-            await HttpContext.SignOutAsync("Cookies");
-
-            // Redirige al usuario a la página de Login
-            return RedirectToAction("Login", "Account");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Login");
         }
 
-        // ----------------------- ACCESO DENEGADO (AccessDenied) -----------------------
-        [HttpGet]
-        public IActionResult AccessDenied()
+        // DTO Auxiliar para leer la respuesta JSON
+        public class AuthResponse
         {
-            // Obtiene el email del usuario logueado, si existe.
-            ViewBag.Email = User.Identity?.Name;
-
-            // Aquí puedes capturar el email del usuario logueado si lo deseas
-            return View();
+            public long UsuarioId { get; set; }
+            public string Nombre { get; set; }
+            public string Email { get; set; }
+            public List<string> Roles { get; set; }
         }
     }
 }

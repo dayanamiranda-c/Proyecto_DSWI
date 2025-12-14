@@ -1,105 +1,140 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Proyecto_DSWI.Models;
-using System;
+using System.Text.Json;
+using System.Text;
 
 namespace Proyecto_DSWI.Controllers
 {
     [Authorize]
     public class CatalogoController : Controller
     {
-        private readonly AppDbContext _context;
+        // Solo inyectamos HttpClient, nada de AppDbContext
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public CatalogoController(AppDbContext context)
+        public CatalogoController(IHttpClientFactory httpClientFactory)
         {
-            _context = context;
+            _httpClientFactory = httpClientFactory;
         }
-
 
         [HttpGet]
         public IActionResult Inicio()
         {
-
             return View();
         }
 
-
+        // -------------------------------------------------------------------
+        // 1. INDEX: LISTADO DESDE API
+        // -------------------------------------------------------------------
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var productos = await _context.Productos
-                .Include(p => p.Categoria) // Para ver el nombre de la categoría
-                .ToListAsync();
+            var client = _httpClientFactory.CreateClient("TiendaAPI");
+            var response = await client.GetAsync("api/productos");
 
-            return View(productos);
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var productos = JsonSerializer.Deserialize<List<Producto>>(jsonString, options);
+                return View(productos);
+            }
+
+            ViewBag.Error = "No se pudo conectar con la API de productos.";
+            return View(new List<Producto>());
         }
 
-  
+        // -------------------------------------------------------------------
+        // 2. NUEVO (GET): CARGA CATEGORIAS DESDE API
+        // -------------------------------------------------------------------
         [HttpGet]
         [Authorize(Roles = "Admin")]
-
-        public IActionResult Nuevo()
+        public async Task<IActionResult> Nuevo()
         {
-            // Carga el combo de categorías
-            ViewBag.Categorias = new SelectList(_context.Categorias, "CategoriaId", "Nombre");
+            await CargarCategoriasViewBag(); // Refactorizado en un método privado abajo
             return View();
         }
 
+        // -------------------------------------------------------------------
+        // 3. NUEVO (POST): GUARDA VÍA API
+        // -------------------------------------------------------------------
         [HttpPost]
         public async Task<IActionResult> Nuevo(Producto producto)
         {
             if (ModelState.IsValid)
             {
+                // Datos automáticos
                 producto.CreadoEn = DateTime.Now;
                 producto.UltimaActualizacion = DateTime.Now;
                 producto.Activo = true;
+                if (string.IsNullOrEmpty(producto.CodigoBarras))
+                    producto.CodigoBarras = "GEN-" + DateTime.Now.Ticks;
 
-                _context.Add(producto);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(producto),
+                    Encoding.UTF8,
+                    "application/json");
+
+                var client = _httpClientFactory.CreateClient("TiendaAPI");
+                var response = await client.PostAsync("api/productos", jsonContent);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return RedirectToAction(nameof(Index));
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Error en la API al guardar el producto.");
+                }
             }
 
-   
-            ViewBag.Categorias = new SelectList(_context.Categorias, "CategoriaId", "Nombre");
+            // CORRECCIÓN IMPORTANTE:
+            // Si falla, recargamos las categorías usando la API, NO usando _context
+            await CargarCategoriasViewBag();
             return View(producto);
         }
 
+        // Método auxiliar para no repetir código de carga de categorías
+        private async Task CargarCategoriasViewBag()
+        {
+            var client = _httpClientFactory.CreateClient("TiendaAPI");
+            var response = await client.GetAsync("api/categorias");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var categorias = JsonSerializer.Deserialize<List<Categoria>>(json, options);
+                ViewBag.Categorias = new SelectList(categorias, "CategoriaId", "Nombre");
+            }
+            else
+            {
+                ViewBag.Categorias = new SelectList(new List<Categoria>(), "CategoriaId", "Nombre");
+            }
+        }
+
+        // -------------------------------------------------------------------
+        // 4. REPORTES (COMENTADOS PORQUE REQUIEREN API NUEVA O DB)
+        // -------------------------------------------------------------------
+        // Nota: Para que estos funcionen sin AppDbContext, debes crear 
+        // endpoints en tu API como "api/movimientos" y "api/inventario"
+        /*
         [HttpGet]
         [Authorize(Roles = "User,Admin")]
         public async Task<IActionResult> Movimientos()
         {
-            var historial = await _context.InventarioMovimientos
-                .Include(m => m.Almacen)
-                .Include(m => m.Producto)
-                .OrderByDescending(m => m.FechaMovimiento)
-                .ToListAsync();
-
-            return View(historial);
+             // TODO: Consumir API cuando exista el endpoint
+             return View(new List<InventarioMovimiento>());
         }
 
- 
         [HttpGet]
         [Authorize(Roles = "User,Admin")]
         public async Task<IActionResult> Inventario(short? id)
         {
-            // Consulta base
-            var query = _context.Inventarios
-                .Include(i => i.Almacen)
-                .Include(i => i.Producto)
-                .AsQueryable();
-
-
-            if (id.HasValue)
-            {
-                query = query.Where(i => i.AlmacenId == id);
-            }
-
-            // Cargamos la lista para el filtro en la vista
-            ViewBag.Almacenes = new SelectList(_context.Almacenes, "AlmacenId", "Nombre");
-
-            return View(await query.ToListAsync());
+             // TODO: Consumir API cuando exista el endpoint
+             return View(new List<Inventario>());
         }
+        */
     }
 }

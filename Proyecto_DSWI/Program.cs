@@ -2,6 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using Proyecto_DSWI.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+// ... (código anterior)
+
+// CONFIGURACIÓN DEL CLIENTE HTTP (Para consumir la API)
+var apiUrl = builder.Configuration["ApiSettings:BaseUrl"];
+builder.Services.AddHttpClient("TiendaAPI", client =>
+{
+    client.BaseAddress = new Uri(apiUrl!);
+});
+
+// ... (Resto de tu código: Session, Auth, Controllers, etc.)
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddAuthentication("Cookies") // Especifica el esquema de autenticación por defecto (Cookies)
@@ -23,11 +33,6 @@ builder.Services.AddAuthorization(options =>
     // Opcional: Puedes definir políticas de autorización más complejas aquí.
     // Para roles simples, el atributo [Authorize(Roles="...")] es suficiente.
 });
-
-var connectionString = builder.Configuration.GetConnectionString("CadenaSQL");
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
 
 // Agregar soporte para sesión
 builder.Services.AddDistributedMemoryCache();

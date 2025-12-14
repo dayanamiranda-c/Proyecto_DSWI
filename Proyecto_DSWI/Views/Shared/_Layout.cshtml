@@ -44,12 +44,21 @@
                                     <i class="bi bi-boxes me-1"></i> Inventario
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" asp-controller="Catalogo" asp-action="Movimientos">
+                                    <i class="bi bi-clock-history me-1"></i> Movimientos
+                                </a>
+                            </li>
                         }
                     </ul>
-
                     <ul class="navbar-nav">
                         @if (User.Identity!.IsAuthenticated)
                         {
+                            <li class="nav-item me-3">
+                                <a class="nav-link text-warning fw-bold" asp-controller="Carrito" asp-action="Index">
+                                    <i class="bi bi-cart4 fs-5 me-1"></i> Mi Carrito
+                                </a>
+                            </li>
                             <li class="nav-item me-3 d-flex align-items-center">
                                 <span class="text-white small fw-light">
                                     Bienvenido, @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value!

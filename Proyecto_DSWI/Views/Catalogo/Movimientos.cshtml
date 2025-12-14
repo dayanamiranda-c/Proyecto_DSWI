@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Proyecto_DSWI.Models.InventarioMovimiento>
+﻿@model IEnumerable<Proyecto_DSWI.Models.MovimientoViewModel>
 
 @{
     ViewData["Title"] = "Historial de Movimientos";
@@ -6,72 +6,75 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary fw-bold">Historial de Movimientos de Inventario</h2>
+        <div>
+            <h2 class="text-success fw-bold"><i class="bi bi-clock-history"></i> Historial de Movimientos</h2>
+            <p class="text-muted mb-0">Registro de auditoría de inventario (Entradas/Salidas/Ventas)</p>
+        </div>
         <a asp-action="Inicio" class="btn btn-outline-secondary">
-            &larr; Volver al Catálogo
+            &larr; Volver al Panel
         </a>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <div class="card shadow border-0">
         <div class="card-body p-0">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+                <thead class="bg-light">
                     <tr>
-                        <th class="ps-4">Fecha</th>
-                        <th>Almacén</th>
+                        <th class="ps-4">Fecha / Hora</th>
                         <th>Producto</th>
+                        <th>Almacén</th>
                         <th class="text-center">Tipo</th>
-                        <th class="text-end">Cantidad</th>
-                        <th>Referencia</th>
-                        <th class="text-muted">Usuario</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-end pe-4">Usuario</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model != null && Model.Any())
                     {
-                        @foreach (var item in Model)
+                        foreach (var item in Model)
                         {
                             <tr>
-                                <td class="ps-4 text-secondary">
-                                    @item.FechaMovimiento.ToString("dd/MM/yyyy HH:mm")
+                                <td class="ps-4 text-muted small">
+                                    <i class="bi bi-calendar3 me-1"></i> @item.Fecha.ToString("dd/MM/yyyy") <br />
+                                    <i class="bi bi-clock me-1"></i> @item.Fecha.ToString("HH:mm")
                                 </td>
                                 <td>
-                                    <span class="fw-bold text-dark">@item.Almacen?.Nombre</span>
+                                    <span class="fw-bold d-block text-dark">@item.Producto</span>
+                                    <span class="badge bg-light text-secondary border">@item.Sku</span>
                                 </td>
-                                <td>
-                                    <span class="text-primary">@item.Producto?.Nombre</span>
-                                    <br />
-                                    <small class="text-muted" style="font-size: 0.8em;">SKU: @item.Producto?.Sku</small>
-                                </td>
+                                <td>@item.Almacen</td>
                                 <td class="text-center">
-                                    @if (item.TipoMovimiento == "ENTRADA")
+                                    @if (item.TipoMovimiento.ToUpper().Contains("ENTRADA") || item.TipoMovimiento.ToUpper() == "COMPRA")
                                     {
-                                        <span class="badge bg-success bg-opacity-75 rounded-pill px-3">Entrada</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success px-3">
+                                            <i class="bi bi-arrow-down-circle-fill me-1"></i> ENTRADA
+                                        </span>
                                     }
-                                    else if (item.TipoMovimiento == "SALIDA")
+                                    else if (item.TipoMovimiento.ToUpper().Contains("SALIDA") || item.TipoMovimiento.ToUpper() == "VENTA")
                                     {
-                                        <span class="badge bg-danger bg-opacity-75 rounded-pill px-3">Salida</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning text-dark rounded-pill px-3">Ajuste</span>
-                                    }
-                                </td>
-                                <td class="text-end fw-bold">
-                                    @if (item.TipoMovimiento == "SALIDA")
-                                    {
-                                        <span class="text-danger">- @item.Cantidad.ToString("N2")</span>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3">
+                                            <i class="bi bi-arrow-up-circle-fill me-1"></i> SALIDA
+                                        </span>
                                     }
                                     else
                                     {
-                                        <span class="text-success">+ @item.Cantidad.ToString("N2")</span>
+                                        <span class="badge bg-warning text-dark border px-3">
+                                            @item.TipoMovimiento
+                                        </span>
                                     }
                                 </td>
-                                <td>
-                                    <span class="text-muted small">@item.Referencia</span>
+                                <td class="text-center fw-bold fs-5">
+                                    @if (item.TipoMovimiento.ToUpper().Contains("SALIDA") || item.TipoMovimiento.ToUpper() == "VENTA")
+                                    {
+                                        <span class="text-danger">-@item.Cantidad</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success">+@item.Cantidad</span>
+                                    }
                                 </td>
-                                <td class="text-muted small">
-                                    @item.Usuario
+                                <td class="text-end pe-4 text-muted small">
+                                    <i class="bi bi-person-circle"></i> @item.Usuario
                                 </td>
                             </tr>
                         }
@@ -79,9 +82,9 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <i class="bi bi-clipboard-x display-6 d-block mb-2"></i>
-                                No se han registrado movimientos de inventario aún.
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-journal-x fs-1 d-block mb-3"></i>
+                                No hay movimientos registrados aún.
                             </td>
                         </tr>
                     }

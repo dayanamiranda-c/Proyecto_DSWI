@@ -1,0 +1,29 @@
+﻿@model Proyecto_DSWI.Models.Producto
+
+@{
+    ViewData["Title"] = "Eliminar Producto";
+}
+
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card border-danger shadow">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación</h4>
+        </div>
+        <div class="card-body text-center py-5">
+            <h5 class="card-title mb-4">¿Estás seguro que deseas eliminar este producto?</h5>
+
+            <div class="alert alert-light border">
+                <h3 class="text-primary fw-bold">@Model.Nombre</h3>
+                <p class="text-muted">SKU: @Model.Sku | Precio: S/. @Model.PrecioLista</p>
+            </div>
+
+            <p class="text-danger small">Esta acción marcará el producto como inactivo en el sistema.</p>
+
+            <form asp-action="Eliminar" class="d-flex justify-content-center gap-3 mt-4">
+                <input type="hidden" name="id" value="@Model.ProductoId" />
+                <a asp-action="Index" class="btn btn-secondary px-4">Cancelar</a>
+                <button type="submit" class="btn btn-danger px-4">Confirmar Eliminación</button>
+            </form>
+        </div>
+    </div>
+</div>

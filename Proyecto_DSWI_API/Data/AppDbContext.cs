@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Proyecto_DSWI_API.Models;
 
-namespace Proyecto_DSWI.Models // Lo ponemos aquí para que no necesites carpetas extra
+namespace Proyecto_DSWI_API.Data // Lo ponemos aquí para que no necesites carpetas extra
 {
     // Esta clase es el "Puente" obligatorio para conectar tu SQL con C#
     public class AppDbContext : DbContext

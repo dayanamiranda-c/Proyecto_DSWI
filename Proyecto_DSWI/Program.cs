@@ -28,6 +28,16 @@ var connectionString = builder.Configuration.GetConnectionString("CadenaSQL");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+// Agregar soporte para sesión
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30); // El carrito expira en 30 mins
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 
@@ -44,7 +54,7 @@ app.UseAuthentication();
 
 app.UseRouting();
 
-app.UseAuthorization();
+app.UseSession(); // <--- IMPORTANTE: Activar el middleware
 
 app.UseAuthorization();
 

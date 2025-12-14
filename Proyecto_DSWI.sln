@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22 d17.14
+VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proyecto_DSWI", "Proyecto_DSWI\Proyecto_DSWI.csproj", "{5E4DFADC-6FFA-4C54-91BD-2696F5FD4141}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Proyecto_DSWI", "Proyecto_DSWI\Proyecto_DSWI.csproj", "{5E4DFADC-6FFA-4C54-91BD-2696F5FD4141}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proyecto_DSWI_API", "Proyecto_DSWI_API\Proyecto_DSWI_API.csproj", "{8475A3AD-7C7F-48C5-826C-5B3B48F543E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{5E4DFADC-6FFA-4C54-91BD-2696F5FD4141}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E4DFADC-6FFA-4C54-91BD-2696F5FD4141}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5E4DFADC-6FFA-4C54-91BD-2696F5FD4141}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8475A3AD-7C7F-48C5-826C-5B3B48F543E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8475A3AD-7C7F-48C5-826C-5B3B48F543E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8475A3AD-7C7F-48C5-826C-5B3B48F543E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8475A3AD-7C7F-48C5-826C-5B3B48F543E3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
